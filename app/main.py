@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import os
+import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -19,6 +22,61 @@ DAILY_HOUR = int(os.environ.get("STUDIO_DAILY_HOUR", "9"))      # local time; -1
 AUTO_DRAFTS = int(os.environ.get("STUDIO_AUTO_DRAFTS", "2"))     # best ideas auto-drafted per daily run
 
 app = FastAPI(title="LinkedIn Studio")
+
+# ---------- login (a simple password page; replaces the browser's basic-auth popup) ----------
+PASSWORD = os.environ.get("STUDIO_PASSWORD", "")
+SECRET = (os.environ.get("STUDIO_SECRET") or PASSWORD or secrets.token_hex(16)).encode()
+COOKIE = "studio_session"
+OPEN_PATHS = {"/login", "/favicon.ico"}
+
+
+def _session_ok(request: Request) -> bool:
+    want = hmac.new(SECRET, b"signal-studio", hashlib.sha256).hexdigest()
+    return hmac.compare_digest(request.cookies.get(COOKIE, ""), want)
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    if not PASSWORD or request.url.path in OPEN_PATHS or _session_ok(request):
+        return await call_next(request)
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "Signed out, reload the page"}, status_code=401)
+    return RedirectResponse("/login")
+
+
+LOGIN_HTML = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Signal Studio</title><style>
+:root{--bg:#07080d;--t:#e9ecf5;--m:#8b91a7}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--t);font:15px Inter,system-ui,sans-serif;padding:16px;
+background-image:radial-gradient(40% 35% at 20% 15%,rgba(124,92,255,.25),transparent 70%),radial-gradient(35% 30% at 80% 20%,rgba(34,211,238,.18),transparent 70%)}
+form{width:100%;max-width:360px;background:rgba(20,22,34,.8);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:28px}
+.l{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#7c5cff,#22d3ee);display:grid;place-items:center;font-size:20px;margin-bottom:14px}
+h1{margin:0 0 4px;font-size:22px}p{margin:0 0 18px;color:var(--m);font-size:13px}
+input{width:100%;font:inherit;font-size:16px;color:var(--t);background:#11131e;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px;margin-bottom:12px}
+button{width:100%;font:inherit;font-weight:600;color:#fff;border:0;border-radius:12px;padding:12px;background:linear-gradient(135deg,#7c5cff,#22d3ee);cursor:pointer}
+.e{color:#f87171;font-size:13px;margin-bottom:10px}</style></head><body>
+<form method="post" action="/login"><div class="l">◆</div><h1>Signal Studio</h1><p>Your LinkedIn agent</p>
+__ERR__<input type="password" name="password" placeholder="Password" autofocus autocomplete="current-password">
+<button>Sign in</button></form></body></html>"""
+
+
+@app.get("/login")
+def login_page(e: int = 0):
+    return HTMLResponse(LOGIN_HTML.replace("__ERR__", '<div class="e">Wrong password</div>' if e else ""))
+
+
+@app.post("/login")
+async def login(request: Request):
+    form = (await request.body()).decode()
+    from urllib.parse import parse_qs
+    pw = (parse_qs(form).get("password") or [""])[0]
+    if not PASSWORD or not hmac.compare_digest(pw, PASSWORD):
+        await asyncio.sleep(1)  # slow down guessing
+        return RedirectResponse("/login?e=1", status_code=303)
+    r = RedirectResponse("/", status_code=303)
+    r.set_cookie(COOKIE, hmac.new(SECRET, b"signal-studio", hashlib.sha256).hexdigest(), max_age=60 * 60 * 24 * 90,
+                 httponly=True, secure=request.headers.get("x-forwarded-proto") == "https", samesite="lax")
+    return r
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 LOCK = asyncio.Lock()
 STATUS = {"busy": False, "step": "", "error": ""}

@@ -37,4 +37,4 @@ sanctioned routes:
 ## Deploy
 `./deploy.sh` builds a Docker image (Python + Claude Code CLI) and runs it on a server behind Caddy. Set
 `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) in the server's env file. Put the dashboard behind auth:
-it can spend your Claude usage and post to your LinkedIn.
+set `STUDIO_PASSWORD` (login page) because it can spend your Claude usage and post to your LinkedIn.
