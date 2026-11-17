@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07080d; --panel:rgba(20,22,34,.72); --panel-2:#11131e; --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
+  --text:#e9ecf5; --muted:#8b91a7; --faint:#5d6378;
+  --a1:#7c5cff; --a2:#22d3ee; --a3:#f472b6; --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --li:#0a66c2;
+  --grad:linear-gradient(135deg,var(--a1),var(--a2));
+  --r:16px; --shadow:0 10px 40px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;
+  background:radial-gradient(40% 35% at 15% 10%,rgba(124,92,255,.22),transparent 70%),
+             radial-gradient(35% 30% at 85% 15%,rgba(34,211,238,.16),transparent 70%),
+             radial-gradient(40% 40% at 60% 100%,rgba(244,114,182,.10),transparent 70%);
+  animation:drift 24s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate3d(3%,-2%,0) scale(1.05)}}
+a{color:var(--a2);text-decoration:none} a:hover{text-decoration:underline}
+button{font:inherit;cursor:pointer;border:1px solid var(--line-2);background:rgba(255,255,255,.04);color:var(--text);
+  border-radius:10px;padding:7px 12px;transition:.15s} button:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.25)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.btn-p{background:var(--grad);border:0;font-weight:600;color:#fff;box-shadow:0 6px 24px rgba(124,92,255,.35)} .btn-p:hover{filter:brightness(1.1)}
+.btn-ok{border-color:rgba(52,211,153,.5);color:var(--ok)} .btn-bad{border-color:rgba(248,113,113,.4);color:var(--bad)}
+.btn-li{background:var(--li);border:0;color:#fff;font-weight:600}
+textarea,input{font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line-2);border-radius:12px;padding:10px 12px;width:100%;outline:none}
+textarea:focus,input:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(124,92,255,.2)}
+.wrap{max-width:1480px;margin:0 auto;padding:18px 16px 60px}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.02em}
+.logo i{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;font-style:normal;box-shadow:0 0 30px rgba(124,92,255,.6)}
+.logo small{display:block;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
+nav{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);padding:4px;border-radius:12px;backdrop-filter:blur(12px)}
+nav button{border:0;background:none;color:var(--muted);padding:7px 14px} nav button.on{background:rgba(255,255,255,.08);color:var(--text)}
+.sp{flex:1}
+.meta{color:var(--muted);font-size:12px;text-align:right}
+.status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--a2)}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--a2);box-shadow:0 0 0 0 rgba(34,211,238,.7);animation:p 1.4s infinite}
+@keyframes p{to{box-shadow:0 0 0 12px rgba(34,211,238,0)}}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;backdrop-filter:blur(12px);position:relative;overflow:hidden}
+.stat b{font-size:26px;font-weight:800;letter-spacing:-.03em;display:block}
+.stat span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.stat:after{content:"";position:absolute;right:-20px;top:-20px;width:80px;height:80px;border-radius:50%;background:var(--c,var(--a1));opacity:.15;filter:blur(10px)}
+.grid{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(320px,1.15fr) minmax(380px,1.3fr);gap:14px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);backdrop-filter:blur(14px);box-shadow:var(--shadow);min-width:0}
+.ph{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700}
+.ph small{color:var(--muted);font-weight:500}
+.pb{padding:12px;max-height:calc(100vh - 250px);overflow:auto}
+.news{padding:10px;border-radius:12px;display:block;color:var(--text);border:1px solid transparent}
+.news:hover{background:rgba(255,255,255,.04);border-color:var(--line);text-decoration:none}
+.news .t{font-weight:500;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.chip.src{color:#c4b5fd;border-color:rgba(124,92,255,.35);background:rgba(124,92,255,.1)}
+.chip.proj{color:#67e8f9;border-color:rgba(34,211,238,.35);background:rgba(34,211,238,.08)}
+.chip.fmt{color:#f9a8d4;border-color:rgba(244,114,182,.35);background:rgba(244,114,182,.08)}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.idea{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;background:rgba(255,255,255,.02);transition:.2s;cursor:pointer}
+.idea:hover{border-color:var(--line-2);transform:translateY(-1px)}
+.idea.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1),0 10px 30px rgba(124,92,255,.2)}
+.idea h4{margin:8px 0 4px;font-size:15px;letter-spacing:-.01em}
+.hook{color:var(--text);font-style:italic;border-left:2px solid var(--a1);padding-left:10px;margin:8px 0;color:#cfd3e6}
+.small{font-size:12px;color:var(--muted)}
+.fit{margin-left:auto;font:600 12px JetBrains Mono,monospace;padding:2px 8px;border-radius:8px;background:rgba(52,211,153,.12);color:var(--ok)}
+.empty{color:var(--muted);text-align:center;padding:40px 16px}
+.empty b{display:block;color:var(--text);font-size:15px;margin-bottom:6px}
+.ed label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+.ed textarea.post{min-height:260px;line-height:1.55}
+.count{font:12px JetBrains Mono,monospace;color:var(--muted)} .count.over{color:var(--bad)}
+.li-card{background:#fff;color:#1d1d1d;border-radius:12px;padding:14px 16px;font:14px/1.45 -apple-system,system-ui,sans-serif;margin-top:6px}
+.li-head{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:700}
+.li-head b{display:block;font-size:14px} .li-head span{font-size:12px;color:#666}
+.li-body{white-space:pre-wrap;word-wrap:break-word} .li-more{color:#666;cursor:pointer}
+.li-tags{color:var(--li);margin-top:8px}
+.badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
+.b-pending{background:rgba(251,191,36,.12);color:var(--warn)} .b-approved{background:rgba(52,211,153,.13);color:var(--ok)}
+.b-posted{background:rgba(10,102,194,.25);color:#7cb8ff} .b-rejected{background:rgba(248,113,113,.12);color:var(--bad)}
+.kan{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kcard{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;cursor:pointer;background:rgba(255,255,255,.02)}
+.kcard:hover{border-color:var(--line-2)}
+.kcard p{margin:6px 0 0;font-size:13px;color:#cfd3e6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.about-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.about-card{padding:16px} .about-card textarea{min-height:360px}
+.about-card.ok{border-color:rgba(52,211,153,.6);box-shadow:0 0 0 1px rgba(52,211,153,.4)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#1b1e2e;border:1px solid var(--line-2);
+  padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);transition:.3s;z-index:9;max-width:calc(100vw - 32px)}
+.toast.show{transform:translateX(-50%) translateY(0)} .toast.err{border-color:var(--bad);color:#fecaca}
+.hide{display:none!important}
+.lipill{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel);font-size:13px}
+.lipill img,.lipill .dot{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--li);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px}
+.lipill .ok{color:var(--ok);font-size:11px}
+.drop{border:1.5px dashed var(--line-2);border-radius:14px;padding:18px;text-align:center;color:var(--muted);transition:.2s;cursor:pointer}
+.drop.on,.drop:hover{border-color:var(--a2);background:rgba(34,211,238,.06);color:var(--text)}
+.changed{white-space:pre-wrap;font-size:12px;color:#a7f3d0;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:8px 10px;margin-top:8px}
+ol.steps{margin:6px 0 0 18px;padding:0;color:var(--muted);font-size:12px}
+.mono{font-family:JetBrains Mono,monospace;font-size:12px}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:s .8s linear infinite;vertical-align:-2px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (max-width:1100px){.grid{grid-template-columns:1fr 1fr}.grid>.panel:last-child{grid-column:1/-1}.about-grid,.kan{grid-template-columns:1fr 1fr}}
+@media (max-width:720px){.grid,.about-grid,.kan{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.pb{max-height:none}.meta{text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><i>◆</i><div>Signal Studio<small>Your LinkedIn agent: news → your story → a draft you approve</small></div></div>
+    <nav id="tabs">
+      <button data-t="studio" class="on">Studio</button><button data-t="queue">Queue</button>
+      <button data-t="about">About section</button><button data-t="profile">Profile</button>
+    </nav>
+    <div class="sp"></div>
+    <div id="status" class="status hide"><span class="pulse"></span><span id="step"></span></div>
+    <div class="meta" id="meta"></div>
+    <div id="lipill"></div>
+    <button class="btn-p" id="refresh">⚡ Find today's ideas</button>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <!-- STUDIO -->
+  <section id="v-studio" class="grid">
+    <div class="panel"><div class="ph">📡 News radar <small id="news-n"></small></div><div class="pb" id="news"></div></div>
+    <div class="panel"><div class="ph">💡 Post ideas <small>news × what you built</small></div><div class="pb" id="ideas"></div></div>
+    <div class="panel"><div class="ph">✍️ Draft <span class="sp"></span><span id="ed-badge"></span></div><div class="pb ed" id="editor"></div></div>
+  </section>
+
+  <!-- QUEUE -->
+  <section id="v-queue" class="kan hide"></section>
+
+  <!-- ABOUT -->
+  <section id="v-about" class="hide">
+    <div class="panel" style="padding:16px">
+      <div class="row" style="gap:12px">
+        <div style="flex:1;min-width:240px"><b>About section drafts</b>
+          <div class="small">Three angles, written from your real projects. Edit, approve one, then copy it into LinkedIn → Profile → About.</div></div>
+        <input id="about-notes" placeholder="Optional notes, e.g. 'open to Staff/AI engineer roles in Dubai or remote'" style="flex:2;min-width:240px">
+        <button class="btn-p" id="about-gen">Draft About section</button>
+      </div>
+    </div>
+    <div class="panel" style="padding:16px;margin-top:14px" id="li-import"></div>
+    <div class="about-grid" id="about"></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="v-profile" class="hide">
+    <div class="panel" style="padding:16px">
+      <div class="row"><b>Your profile & build stories</b><span class="sp"></span><button class="btn-p" id="prof-save">Save profile</button></div>
+      <p class="small">This is the agent's only source of truth about you. Every post story comes from here, and it never invents results. Add projects, numbers and lessons to get better posts.</p>
+      <textarea id="prof" class="mono" style="min-height:62vh"></textarea>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ago = iso => { const m = (Date.now() - new Date(iso)) / 6e4; return m < 60 ? `${Math.max(1, m|0)}m` : m < 1440 ? `${(m/60)|0}h` : `${(m/1440)|0}d`; };
+let S = null, selDraft = null, selIdea = null, tab = "studio", foldOpen = false;
+try { tab = localStorage.getItem("tab") || "studio"; } catch {}
+
+function toast(msg, err) { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : ""); clearTimeout(t._h); t._h = setTimeout(() => t.className = "toast", 3200); }
+async function api(path, body, method) {
+  const r = await fetch(path, { method: method || (body ? "POST" : "GET"), headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+async function load() { S = await api("/api/state"); render(); if (S.status.busy) setTimeout(load, 2000); }
+async function act(btn, fn, okMsg) {
+  const html = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<span class="spin"></span> ${btn.dataset.busy || "Working"}`;
+  const poll = setInterval(load, 2000);
+  try { const r = await fn(); if (okMsg) toast(okMsg); return r; } catch (e) { toast(e.message, true); } finally { clearInterval(poll); btn.disabled = false; btn.innerHTML = html; await load(); }
+}
+
+function setTab(t) { tab = t; try { localStorage.setItem("tab", t); } catch {} render(); if (t === "profile") loadProfile(); }
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => setTab(b.dataset.t));
+
+function render() {
+  if (!S) return;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === tab));
+  ["studio", "queue", "about", "profile"].forEach(t => $("#v-" + t).classList.toggle("hide", t !== tab));
+  $("#status").classList.toggle("hide", !S.status.busy); $("#step").textContent = S.status.step;
+  $("#refresh").disabled = S.status.busy;
+  const last = S.runs[0];
+  $("#meta").innerHTML = `${last ? "Last run " + ago(last.started) + " ago · " + esc(last.note || "running") : "No runs yet"}<br>${S.next_run ? "Daily run " + S.next_run.slice(11) : ""} · ${esc(S.model)}`;
+  const st = S.stats;
+  $("#stats").innerHTML = [["Stories scanned", st.stories, "var(--a1)"], ["Live ideas", st.ideas, "var(--a2)"], ["Awaiting approval", st.pending, "var(--warn)"], ["Approved", st.approved, "var(--ok)"], ["Posted", st.posted, "var(--li)"]]
+    .map(([l, v, c]) => `<div class="stat" style="--c:${c}"><b>${v}</b><span>${l}</span></div>`).join("");
+  renderNews(); renderIdeas(); renderEditor(); renderQueue(); renderAbout(); renderLinkedIn();
+}
+
+function renderNews() {
+  $("#news-n").textContent = S.news.length ? `${S.news.length} latest` : "";
+  $("#news").innerHTML = S.news.length ? S.news.map(n => `<a class="news" href="${esc(n.url)}" target="_blank" rel="noopener">
+      <div class="row"><span class="chip src">${esc(n.source)}</span><span class="small">${ago(n.published)}</span></div>
+      <div class="t">${esc(n.title)}</div></a>`).join("")
+    : `<div class="empty"><b>No news yet</b>Hit “Find today's ideas” to scan Hacker News and the AI/tech press.</div>`;
+}
+
+function renderIdeas() {
+  const draftOf = id => S.drafts.find(d => d.idea_id === id);
+  $("#ideas").innerHTML = S.ideas.length ? S.ideas.map(i => { const d = draftOf(i.id);
+    return `<div class="idea ${selIdea === i.id ? "sel" : ""}" data-idea="${i.id}">
+      <div class="row"><span class="chip proj">◆ ${esc(i.project_id)}</span><span class="chip fmt">${esc(i.format)}</span><span class="fit" title="Editorial fit, not a probability">fit ${i.fit}/10</span></div>
+      <h4>${esc(i.title)}</h4><div class="hook">“${esc(i.hook)}”</div>
+      <div class="small"><b>Story:</b> ${esc(i.story_beat)}</div>
+      <div class="small" style="margin-top:4px"><b>Why now:</b> ${esc(i.why_now)}</div>
+      ${i.news ? `<div class="small" style="margin-top:6px">📰 <a href="${esc(i.news.url)}" target="_blank" rel="noopener">${esc(i.news.title)}</a> · ${esc(i.news.source)}</div>` : ""}
+      <div class="row" style="margin-top:10px">${d ? `<button data-open="${d.id}">Open draft →</button> <span class="badge b-${d.status}">${d.status}</span>`
+        : `<button class="btn-p" data-draft="${i.id}" data-busy="Writing">✍️ Draft this post</button><button data-dismiss="${i.id}">Dismiss</button>`}</div></div>`; }).join("")
+    : `<div class="empty"><b>No ideas yet</b>The agent pairs fresh news with your real projects and pitches posts with a story.</div>`;
+}
+
+function curDraft() { return S.drafts.find(d => d.id === selDraft) || null; }
+function renderEditor() {
+  const d = curDraft(); const ed = $("#editor");
+  $("#ed-badge").innerHTML = d ? `<span class="badge b-${d.status}">${d.status}</span> <span class="small">v${d.version}</span>` : "";
+  if (!d) { ed.innerHTML = `<div class="empty"><b>Pick an idea</b>Click “Draft this post” on an idea, or open one from the Queue. Nothing is posted without your approval.</div>`; return; }
+  if (ed.dataset.id == d.id && ed.dataset.v == d.version && ed.dataset.s == d.status) { preview(); return; } // keep typing state
+  ed.dataset.id = d.id; ed.dataset.v = d.version; ed.dataset.s = d.status; foldOpen = false;
+  ed.innerHTML = `
+    <div class="small">${esc(d.idea.title || "")}</div>
+    <label>Post <span class="count" id="cnt"></span></label>
+    <textarea class="post" id="post">${esc(d.text)}</textarea>
+    <label>Hashtags</label><input id="tags" value="${esc(d.hashtags)}">
+    <label>First comment (put the link here, not in the post)</label><textarea id="fc" rows="2">${esc(d.first_comment)}</textarea>
+    <label>Visual idea</label><div class="small">🖼️ ${esc(d.image_idea)}</div>
+    <label>LinkedIn preview</label>
+    <div class="li-card"><div class="li-head"><div class="avatar">${esc((S.profile_name || "?")[0])}</div><div><b>${esc(S.profile_name)}</b><span>now · 🌐</span></div></div>
+      <div class="li-body" id="pv"></div><div class="li-tags" id="pvt"></div></div>
+    <label>Feedback for a rewrite</label>
+    <div class="row"><input id="fb" placeholder="e.g. shorter, more about the bug, less formal" style="flex:1"><button data-regen="${d.id}" data-busy="Rewriting">↻ Rewrite</button></div>
+    <div class="row" style="margin-top:14px">
+      ${d.status !== "approved" && d.status !== "posted" ? `<button class="btn-ok" data-st="approved">✓ Approve</button>` : ""}
+      ${d.status !== "rejected" ? `<button class="btn-bad" data-st="rejected">✕ Reject</button>` : `<button data-st="pending">Restore</button>`}
+      <span class="sp"></span>
+      <button data-copy>Copy post</button>
+      ${d.status === "approved" && S.linkedin.account ? `<button class="btn-li" data-publish="${d.id}" data-busy="Posting">Post to LinkedIn now</button>` : ""}
+      ${d.status === "approved" && !S.linkedin.account ? `<button class="btn-li" data-share>Open in LinkedIn ↗</button>` : ""}
+      ${d.status === "posted" && d.post_url ? `<a href="${esc(d.post_url)}" target="_blank" rel="noopener">View on LinkedIn ↗</a>` : ""}
+      ${d.status === "approved" ? `<button data-st="posted">Mark posted</button>` : ""}
+    </div>
+    ${/\[ADD:/.test(d.text) ? `<div class="small" style="margin-top:10px;color:var(--warn)">⚠ This draft has [ADD: …] placeholders. Fill them in before approving.</div>` : ""}`;
+  let t; $("#post").oninput = () => { preview(); clearTimeout(t); t = setTimeout(() => api(`/api/drafts/${d.id}/text`, { text: $("#post").value }), 600); };
+  $("#tags").oninput = preview;
+  preview();
+}
+function fullText() { return $("#post").value.trim() + "\n\n" + $("#tags").value.trim(); }
+function preview() {
+  if (!$("#post")) return;
+  const txt = $("#post").value, n = fullText().length, c = $("#cnt");
+  c.textContent = `${n} / 3000`; c.classList.toggle("over", n > 3000);
+  const fold = 210, short = txt.length > fold && !foldOpen;
+  $("#pv").innerHTML = esc(short ? txt.slice(0, fold) : txt) + (short ? `<span class="li-more" id="more">…see more</span>` : "");
+  $("#pvt").textContent = $("#tags").value;
+  const m = $("#more"); if (m) m.onclick = () => { foldOpen = true; preview(); };
+}
+
+function renderQueue() {
+  const cols = [["pending", "Awaiting approval"], ["approved", "Approved"], ["posted", "Posted"], ["rejected", "Rejected"]];
+  $("#v-queue").innerHTML = cols.map(([s, l]) => { const ds = S.drafts.filter(d => d.status === s);
+    return `<div class="panel"><div class="ph"><span class="badge b-${s}">${l}</span><small>${ds.length}</small></div><div class="pb">${ds.map(d =>
+      `<div class="kcard" data-open="${d.id}"><div class="row"><span class="chip proj">◆ ${esc(d.idea.project_id || "")}</span><span class="small">${ago(d.updated)} ago</span></div><p>${esc(d.text)}</p></div>`).join("") || `<div class="empty small">Empty</div>`}</div></div>`; }).join("");
+}
+
+function renderAbout() {
+  const el = $("#about");
+  if (el.contains(document.activeElement)) return;
+  el.innerHTML = S.about.length ? S.about.map(a => `<div class="panel about-card ${a.status === "approved" ? "ok" : ""}">
+      <div class="row"><b>${esc(a.label)}</b><span class="sp"></span>${a.status === "approved" ? `<span class="badge b-approved">approved</span>` : ""}</div>
+      <label class="small" style="display:block;margin:10px 0 4px">HEADLINE <span class="count">${a.headline.length}/220</span></label>
+      <input data-hl="${a.id}" value="${esc(a.headline)}">
+      <label class="small" style="display:block;margin:10px 0 4px">ABOUT <span class="count">${a.text.length}/2600</span></label>
+      <textarea data-ab="${a.id}">${esc(a.text)}</textarea>
+      ${a.what_changed ? `<div class="changed">${esc(a.what_changed)}</div>` : ""}
+      <div class="row" style="margin-top:10px">${a.status !== "approved" ? `<button class="btn-ok" data-abst="${a.id}">✓ Approve this one</button>` : ""}
+        <span class="sp"></span><button data-abcopy="${a.id}">Copy About</button><button data-hlcopy="${a.id}">Copy headline</button></div></div>`).join("")
+    : `<div class="panel empty" style="grid-column:1/-1"><b>No About drafts yet</b>Click “Draft About section” to get three versions built from your projects.</div>`;
+}
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button, .idea, .kcard"); if (!b) return;
+  const D = b.dataset;
+  if (D.draft) { e.stopPropagation(); selIdea = +D.draft; const d = await act(b, () => api(`/api/ideas/${D.draft}/draft`, {}), "Draft ready for review"); if (d) { selDraft = d.id; render(); } return; }
+  if (D.dismiss) { e.stopPropagation(); await api(`/api/ideas/${D.dismiss}/dismiss`, {}); return load(); }
+  if (D.open) { e.stopPropagation(); selDraft = +D.open; const d = curDraft(); selIdea = d && d.idea_id; if (tab !== "studio") setTab("studio"); else render(); return; }
+  if (D.idea) { selIdea = +D.idea; const d = S.drafts.find(x => x.idea_id === selIdea); if (d) selDraft = d.id; return render(); }
+  if (D.regen) { await act(b, () => api(`/api/drafts/${D.regen}/regenerate`, { feedback: $("#fb").value }), "Rewritten"); return; }
+  if (D.st) {
+    if (D.st === "approved" && /\[ADD:/.test($("#post").value) && !confirm("This draft still has [ADD: …] placeholders. Approve anyway?")) return;
+    await api(`/api/drafts/${selDraft}/text`, { text: $("#post").value });
+    await api(`/api/drafts/${selDraft}/status`, { status: D.st }); toast({ approved: "Approved ✓ Ready to post", rejected: "Rejected", posted: "Marked as posted 🎉", pending: "Restored" }[D.st]); return load();
+  }
+  if ("copy" in D) { await navigator.clipboard.writeText(fullText()); return toast("Post copied"); }
+  if (D.publish) {
+    if (!confirm("Publish this post to your LinkedIn feed now? It goes public immediately.")) return;
+    await api(`/api/drafts/${D.publish}/text`, { text: $("#post").value });
+    const r = await act(b, () => api(`/api/drafts/${D.publish}/publish`, {}));
+    if (r) toast(r.comment_posted === false ? "Posted 🎉 (first comment failed, add it by hand)" : "Posted to LinkedIn 🎉");
+    return;
+  }
+  if ("share" in D) { await navigator.clipboard.writeText(fullText()); toast("Copied! Paste it into the LinkedIn composer, then add the first comment.");
+    window.open("https://www.linkedin.com/feed/?shareActive=true&text=" + encodeURIComponent(fullText()), "_blank", "noopener"); return; }
+  if (D.abst) { await saveAbout(D.abst); await api(`/api/about/${D.abst}/status`, { status: "approved" }); toast("About section approved"); return load(); }
+  if (D.abcopy) { await navigator.clipboard.writeText(document.querySelector(`[data-ab="${D.abcopy}"]`).value); return toast("About copied, paste it into LinkedIn → Profile → About"); }
+  if (D.hlcopy) { await navigator.clipboard.writeText(document.querySelector(`[data-hl="${D.hlcopy}"]`).value); return toast("Headline copied"); }
+});
+function renderLinkedIn() {
+  const L = S.linkedin, a = L.account;
+  $("#lipill").innerHTML = a ? `<div class="lipill" title="Connected ${esc(a.connected)}">${a.picture ? `<img src="${esc(a.picture)}" alt="">` : `<span class="dot">in</span>`}<div>${esc(a.name)}<div class="ok">● LinkedIn connected</div></div></div>`
+    : L.configured ? `<a href="/auth/linkedin"><button class="btn-li">in Connect LinkedIn</button></a>`
+    : `<button disabled title="Set LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET on the server">in LinkedIn not set up</button>`;
+  const P = L.profile, el = $("#li-import");
+  if (el.contains(document.activeElement)) return;
+  el.innerHTML = `<div class="row"><b>Your real LinkedIn profile</b><span class="sp"></span>
+      ${P ? `<span class="badge b-approved">imported · ${esc(P.source)} · ${ago(P.imported)} ago</span>` : `<span class="badge b-pending">not imported</span>`}</div>
+    ${P ? `<div class="small" style="margin-top:6px">“${esc(P.headline || "no headline")}” · ${P.positions} positions · ${P.skills} skills · ${P.posts} past posts (used to match your voice)</div>` : ""}
+    <div class="row" style="gap:14px;margin-top:12px;align-items:stretch">
+      <label class="drop" id="drop" style="flex:1;min-width:240px"><input type="file" accept=".zip" id="zip" class="hide">
+        <b>Drop your LinkedIn data export (.zip)</b><br><span class="small">or click to choose. Read locally on your server, never shared.</span></label>
+      <div style="flex:1;min-width:240px"><div class="small"><b>Get it once from LinkedIn (about 10 min):</b></div>
+        <ol class="steps"><li>Settings &amp; Privacy → Data privacy → <a href="https://www.linkedin.com/mypreferences/d/download-my-data" target="_blank" rel="noopener">Get a copy of your data</a></li>
+        <li>Pick the <b>larger archive</b> (includes Profile, Positions, Skills, Shares) → Request archive</li>
+        <li>Download the zip from LinkedIn's email and drop it here</li></ol>
+        <div class="small" style="margin-top:6px">Quick refresh: ask Claude Code to “read my LinkedIn profile into Signal Studio” and it reads your own profile from your Chrome.</div></div></div>`;
+  const drop = $("#drop"), inp = $("#zip");
+  inp.onchange = () => upload(inp.files[0]);
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("on"); };
+  drop.ondragleave = () => drop.classList.remove("on");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("on"); upload(e.dataTransfer.files[0]); };
+}
+async function upload(f) {
+  if (!f) return;
+  $("#drop").innerHTML = `<span class="spin"></span> Reading ${esc(f.name)}…`;
+  try {
+    const r = await fetch("/api/linkedin/import", { method: "POST", headers: { "Content-Type": "application/zip" }, body: f });
+    const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText);
+    toast(`Imported: ${j.profile.positions} positions, ${j.profile.posts} past posts. Now hit “Draft About section”.`);
+  } catch (e) { toast(e.message, true); }
+  load();
+}
+async function saveAbout(id) { await api(`/api/about/${id}/text`, { text: document.querySelector(`[data-ab="${id}"]`).value, headline: document.querySelector(`[data-hl="${id}"]`).value }); }
+document.addEventListener("focusout", e => { const id = e.target.dataset.ab || e.target.dataset.hl; if (id) saveAbout(id); });
+
+$("#refresh").dataset.busy = "Scanning";
+$("#refresh").onclick = e => act(e.currentTarget, () => api("/api/refresh", {}), "Fresh ideas are in");
+$("#about-gen").dataset.busy = "Writing";
+$("#about-gen").onclick = e => act(e.currentTarget, () => api("/api/about/generate", { notes: $("#about-notes").value }), "3 About drafts ready");
+async function loadProfile() { $("#prof").value = JSON.stringify(await api("/api/profile"), null, 2); }
+$("#prof-save").onclick = async () => { try { await api("/api/profile", JSON.parse($("#prof").value), "PUT"); toast("Profile saved"); } catch (e) { toast("Not saved: " + e.message, true); } };
+
+{ const q = new URLSearchParams(location.search);
+  if (q.get("li") === "connected") setTimeout(() => toast("LinkedIn connected ✓"), 300);
+  if (q.get("li_error")) setTimeout(() => toast("LinkedIn: " + q.get("li_error"), true), 300);
+  if (q.toString()) history.replaceState(null, "", "/"); }
+load(); setInterval(() => { if (!document.hidden && !S?.status.busy) load(); }, 30000);
+if (tab === "profile") loadProfile();
+</script>
+</body>
+</html>
